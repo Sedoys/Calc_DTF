@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Калькулятор ДТФ 2.11</title>
+<style>
+  :root {
+    --main-bg: #f0f2f5;
+    --container-bg: #ffffff;
+    --accent-color: #4a90e2;
+    --border-color: #dcdcdc;
+    --input-border: #ccc;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+  }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--main-bg); margin:0; padding:20px; color:#333 }
+  .container { max-width:1000px; margin:auto; background:var(--container-bg); padding:20px 30px; border-radius:16px; box-shadow:0 4px 20px var(--shadow-color) }
+  h1 { text-align:center; color:var(--accent-color); margin-bottom:20px }
+  .toolbar { display:flex; gap:15px; align-items:center; margin-bottom:10px }
+  select, input[type="number"] { padding:6px 8px; border:1px solid var(--input-border); border-radius:6px; font-size:14px; background:#fff }
+  button { padding:6px 10px; background:var(--accent-color); color:#fff; border:none; border-radius:6px; cursor:pointer }
+  .print-block-group { border:1px solid var(--border-color); padding:12px; margin-bottom:12px; border-radius:10px; background:#fff }
+  .inputs-row { display:flex; gap:10px; flex-wrap:wrap }
+  label { display:flex; flex-direction:column; font-size:14px; color:#444; min-width:120px }
+  .preview { margin-top:16px; height:360px; overflow:auto; background:#ccc; border-radius:10px; padding:10px }
+  #previewCanvas { position:relative; width:580px; min-height:100px; margin:0 auto; border:2px dashed #888; background:#fff }
+  .print-rect { position:absolute; background:rgba(74,144,226,0.5); border:1px solid #2c6db2; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; border-radius:4px; box-sizing:border-box }
+  #result { font-weight:bold; color:var(--accent-color); text-align:right; margin-top:10px }
+  @media (max-width:600px) { #previewCanvas { width:100% } .inputs-row { flex-direction:column } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Калькулятор ДТФ 2.11</h1>
+  <div class="toolbar">
+    <label>Тип печати:
+      <select id="modeSelect"><option value="DTF">DTF</option><option value="UF_DTF">UF DTF</option></select>
+    </label>
+  </div>
+
+  <!-- Цена за нанесение -->
+  <div class="inputs-row" style="margin-bottom:12px">
+    <label>Цена за нанесение (₽ за шт):
+      <input type="number" id="applyPrice" min="0" step="1" value="0" />
+    </label>
+  </div>
+
+  <div id="printsContainer"></div>
+  <button id="addPrintBtn">+ Добавить принт</button>
+
+  <div class="inputs-row" style="margin-top:12px">
+    <label>Отступ по ширине (см):<input type="number" id="globalGapX" min="0" step="0.01" value="0.3"></label>
+    <label>Отступ по высоте (см):<input type="number" id="globalGapY" min="0" step="0.01" value="0.3"></label>
+  </div>
+
+  <div class="inputs-row" style="margin-top:12px; max-width:380px">
+    <label>Цена за погонный метр (₽):<input type="number" id="pricePerMeter" min="0" step="1"></label>
+  </div>
+
+  <div id="result">Итог: 0.00 м, 0 ₽</div>
+
+  <div class="preview">
+    <div id="previewCanvas"></div>
+  </div>
+</div>
+
+<script>
+// constants
+const ROLL_WIDTH_CM = 58;
+const SCALE = 10; // px per 1 cm for preview
+
+// elements
+const modeInput = document.getElementById('modeSelect');
+const printsContainer = document.getElementById('printsContainer');
+const addPrintBtn = document.getElementById('addPrintBtn');
+const previewCanvas = document.getElementById('previewCanvas');
+const resultBox = document.getElementById('result');
+const pricePerMeterInput = document.getElementById('pricePerMeter');
+const applyPriceInput = document.getElementById('applyPrice');
+const globalGapXInput = document.getElementById('globalGapX');
+const globalGapYInput = document.getElementById('globalGapY');
+
+// data
+let prints = []; // each: {w:cm, h:cm, q:int, rot:false|'auto'|true}
+let priceManual = false;
+
+// helpers
+function createPrintBlockDOM(p, idx){
+  const block = document.createElement('div');
+  block.className = 'print-block-group';
+  // Use data attributes only on inputs/selects/buttons that need them
+  block.innerHTML = `
+    <div class="inputs-row">
+      <label>Ширина (см):<input type="number" step="0.1" data-i="${idx}" data-k="w" value="${p.w}"></label>
+      <label>Высота (см):<input type="number" step="0.1" data-i="${idx}" data-k="h" value="${p.h}"></label>
+      <label>Количество:<input type="number" min="1" step="1" data-i="${idx}" data-k="q" value="${p.q}"></label>
+      <label>Поворот:<select data-i="${idx}" data-k="rot"><option value="auto" ${p.rot==='auto'?'selected':''}>auto</option><option value="false" ${p.rot===false?'selected':''}>0°</option><option value="true" ${p.rot===true?'selected':''}>90°</option></select></label>
+      <button class="remove-btn" data-i="${idx}" style="height:34px">Удалить</button>
+    </div>`;
+  return block;
+}
+
+function renderPrintInputs(){
+  printsContainer.innerHTML = '';
+  prints.forEach((p, i)=>{
+    const el = createPrintBlockDOM(p,i);
+    printsContainer.appendChild(el);
+  });
+}
+
+function addPrint(){
+  prints.push({w:10,h:10,q:1,rot:'auto'});
+  renderPrintInputs();
+  // no need to attach individual listeners — we'll use event delegation
+  recalc();
+}
+
+// Event delegation: handle input/select/button clicks inside printsContainer
+printsContainer.addEventListener('input', e=>{
+  const target = e.target;
+  if(!target) return;
+  const i = target.dataset && target.dataset.i;
+  const k = target.dataset && target.dataset.k;
+  if(typeof i === 'undefined' || !k) return; // only handle controls with data-i and data-k
+  const idx = +i;
+  if(!Number.isInteger(idx) || idx < 0 || idx >= prints.length) return;
+
+  if(k === 'q') {
+    prints[idx][k] = Math.max(1, parseInt(target.value) || 1);
+  } else {
+    prints[idx][k] = parseFloat(target.value) || 0;
+  }
+  recalc();
+});
+
+// handle select changes (rotation)
+printsContainer.addEventListener('change', e=>{
+  const target = e.target;
+  if(!target) return;
+  const i = target.dataset && target.dataset.i;
+  const k = target.dataset && target.dataset.k;
+  if(typeof i === 'undefined' || !k) return;
+  if(k !== 'rot') return;
+  const idx = +i;
+  if(!Number.isInteger(idx) || idx < 0 || idx >= prints.length) return;
+  const val = target.value;
+  prints[idx].rot = (val === 'true') ? true : (val === 'false' ? false : 'auto');
+  recalc();
+});
+
+// handle remove button clicks
+printsContainer.addEventListener('click', e=>{
+  const target = e.target;
+  if(!target) return;
+  if(target.classList.contains('remove-btn')){
+    const i = target.dataset && target.dataset.i;
+    if(typeof i === 'undefined') return;
+    const idx = +i;
+    if(!Number.isInteger(idx) || idx < 0 || idx >= prints.length) return;
+    prints.splice(idx,1);
+    renderPrintInputs();
+    recalc();
+  }
+});
+
+function getAutoPrice(meters){
+  // цена для DTF и UF DTF
+  if(modeInput.value === 'UF_DTF'){
+    // новые цены UF DTF
+    if(meters < 1) return 3000;
+    if(meters >=1 && meters < 3) return 2000;
+    if(meters >=3 && meters < 10) return 1800;
+    if(meters >=10 && meters < 30) return 1600;
+    if(meters >=30 && meters < 50) return 1400;
+    return 1300;
+  }
+  // старые цены DTF
+  if(meters < 1) return 1600;
+  if(meters >=1 && meters < 3) return 1400;
+  if(meters >=3 && meters < 10) return 1300;
+  if(meters >=10 && meters < 30) return 1120;
+  if(meters >=30 && meters < 50) return 900;
+  return 850;
+}
+
+function recalc(){
+  previewCanvas.innerHTML = '';
+  const gapX = parseFloat(globalGapXInput.value);
+  const gapY = parseFloat(globalGapYInput.value);
+  const gx = isNaN(gapX) ? (modeInput.value==='DTF'?0.3:0.4) : gapX;
+  const gy = isNaN(gapY) ? (modeInput.value==='DTF'?0.3:0.4) : gapY;
+
+  // build list of individual prints
+  const items = [];
+  prints.forEach(p=>{
+    for(let j=0;j<(p.q||0); j++) items.push({w:p.w, h:p.h, rot:p.rot});
+  });
+
+  // occupied rectangles in cm
+  const occupied = [];
+
+  function overlaps(a, b){
+    return !(a.x + a.w <= b.x || a.x >= b.x + b.w || a.y + a.h <= b.y || a.y >= b.y + b.h);
+  }
+
+  function fits(x,y,w,h){
+    const rect = {x,y,w,h};
+    return !occupied.some(r => overlaps(rect, r));
+  }
+
+  // greedy placement
+  items.forEach(item => {
+    const w1 = item.w, h1 = item.h;
+    const w2 = item.h, h2 = item.w;
+    let useRotate;
+    if(item.rot === true) useRotate = true;
+    else if(item.rot === false) useRotate = false;
+    else useRotate = (w2 < w1);
+    const usedW = useRotate ? w2 : w1;
+    const usedH = useRotate ? h2 : h1;
+
+    let placed = false;
+    for(let y=0; !placed && y<10000; y += 0.5){
+      for(let x=0; !placed && x <= ROLL_WIDTH_CM - usedW + 1e-6; x += 0.5){
+        if(fits(x, y, usedW + gx, usedH + gy)){
+          occupied.push({x, y, w: usedW + gx, h: usedH + gy, usedW, usedH});
+          placed = true;
+        }
+      }
+    }
+    if(!placed){
+      occupied.push({x:0, y:10000, w: usedW + gx, h: usedH + gy, usedW, usedH});
+    }
+  });
+
+  // draw
+  let maxBottom = 0;
+  occupied.forEach(r=>{
+    const el = document.createElement('div');
+    el.className = 'print-rect';
+    el.style.left = (r.x * SCALE) + 'px';
+    el.style.top = (r.y * SCALE) + 'px';
+    el.style.width = (r.usedW * SCALE) + 'px';
+    el.style.height = (r.usedH * SCALE) + 'px';
+    el.textContent = `${r.usedW.toFixed(1)}×${r.usedH.toFixed(1)}`;
+    previewCanvas.appendChild(el);
+    maxBottom = Math.max(maxBottom, r.y + r.h);
+  });
+
+  // preview canvas sizing (fixed width = 58cm)
+  const previewHeightPx = (maxBottom + 2) * SCALE; // +2cm padding
+  previewCanvas.style.width = (ROLL_WIDTH_CM * SCALE) + 'px';
+  previewCanvas.style.height = Math.max(previewHeightPx, 100) + 'px';
+
+  // meters rounded up to hundredths
+  const meters = Math.ceil((maxBottom / 100) * 100) / 100;
+
+  // price per meter auto or manual
+  if(!priceManual){
+    pricePerMeterInput.value = getAutoPrice(meters);
+  }
+  const pricePerMeter = +pricePerMeterInput.value || 0;
+  const printPrice = Math.round(meters * pricePerMeter);
+
+  // apply price: per print
+  const totalPrints = prints.reduce((s,p)=>s + (p.q||0), 0);
+  const applyPrice = +applyPriceInput.value || 0;
+  const applyTotal = totalPrints * applyPrice;
+
+  const total = printPrice + applyTotal;
+  resultBox.textContent = `Итог: ${meters.toFixed(2)} м, ${total.toFixed(0)} ₽`;
+}
+
+// events
+addPrintBtn.addEventListener('click', addPrint);
+pricePerMeterInput.addEventListener('input', ()=>{ priceManual = true; recalc(); });
+applyPriceInput.addEventListener('input', recalc);
+globalGapXInput.addEventListener('input', recalc);
+globalGapYInput.addEventListener('input', recalc);
+modeInput.addEventListener('change', ()=>{ if(modeInput.value==='DTF'){ globalGapXInput.value='0.3'; globalGapYInput.value='0.3'; } else { globalGapXInput.value='0.4'; globalGapYInput.value='0.4'; } priceManual=false; recalc(); });
+
+// init
+addPrint();
+</script>
+</body>
+</html>
