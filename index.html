@@ -1,286 +1,265 @@
+<!-- Калькулятор ДТФ 4.0 — Финальная исправленная версия -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Калькулятор ДТФ 2.11</title>
+<meta charset="utf-8" />
+<title>Калькулятор ДТФ 4.0 (Skyline)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  :root {
-    --main-bg: #f0f2f5;
-    --container-bg: #ffffff;
-    --accent-color: #4a90e2;
-    --border-color: #dcdcdc;
-    --input-border: #ccc;
-    --shadow-color: rgba(0, 0, 0, 0.1);
-  }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--main-bg); margin:0; padding:20px; color:#333 }
-  .container { max-width:1000px; margin:auto; background:var(--container-bg); padding:20px 30px; border-radius:16px; box-shadow:0 4px 20px var(--shadow-color) }
-  h1 { text-align:center; color:var(--accent-color); margin-bottom:20px }
-  .toolbar { display:flex; gap:15px; align-items:center; margin-bottom:10px }
-  select, input[type="number"] { padding:6px 8px; border:1px solid var(--input-border); border-radius:6px; font-size:14px; background:#fff }
-  button { padding:6px 10px; background:var(--accent-color); color:#fff; border:none; border-radius:6px; cursor:pointer }
-  .print-block-group { border:1px solid var(--border-color); padding:12px; margin-bottom:12px; border-radius:10px; background:#fff }
-  .inputs-row { display:flex; gap:10px; flex-wrap:wrap }
-  label { display:flex; flex-direction:column; font-size:14px; color:#444; min-width:120px }
-  .preview { margin-top:16px; height:360px; overflow:auto; background:#ccc; border-radius:10px; padding:10px }
-  #previewCanvas { position:relative; width:580px; min-height:100px; margin:0 auto; border:2px dashed #888; background:#fff }
-  .print-rect { position:absolute; background:rgba(74,144,226,0.5); border:1px solid #2c6db2; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; border-radius:4px; box-sizing:border-box }
-  #result { font-weight:bold; color:var(--accent-color); text-align:right; margin-top:10px }
-  @media (max-width:600px) { #previewCanvas { width:100% } .inputs-row { flex-direction:column } }
+  body{font-family:Inter,system-ui,Arial,sans-serif;padding:18px;background:#f5f7fb;margin:0;color:#222}
+  .container{max-width:1100px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  h1{margin:0;color:#1f4eda;font-size:20px}
+  .sub{color:#666;font-size:13px}
+  .grid{display:grid;grid-template-columns:1fr 420px;gap:16px}
+  .block{background:#fff;padding:14px;border-radius:10px;box-shadow:0 6px 20px rgba(20,30,60,0.06)}
+  label{display:block;font-size:13px;color:#444;margin-bottom:8px}
+  input,select,button{font-size:13px}
+  input,select{padding:8px;border-radius:8px;border:1px solid #e0e6ef;background:#fff}
+  button{padding:8px 10px;border-radius:8px;border:none;background:#1f4eda;color:#fff;cursor:pointer}
+  .row{display:flex;gap:8px;align-items:center}
+  .muted{color:#777;font-size:13px}
+  #printsContainer .print-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .small-btn{padding:6px 8px;border-radius:6px;border:none;color:#fff;cursor:pointer}
+  .auto-btn{background:#6fb3d2}
+  .rot90-btn{background:#2b6acb}
+  .del-btn{background:#e05d5d}
+  #previewWrapper{display:flex;flex-direction:column;align-items:center}
+  #rollWidthIndicator{font-weight:600;margin-bottom:8px;color:#333}
+  #previewCanvas{position:relative;background:#fff;border:2px dashed #bdbdbd;border-radius:8px;overflow:auto}
+  .print-rect{position:absolute;background:rgba(31,78,218,0.14);border:1px solid rgba(31,78,218,0.35);color:#08306b;font-size:11px;display:flex;align-items:center;justify-content:center;border-radius:4px;box-sizing:border-box}
+  #result{white-space:pre-line;font-weight:600}
+  .info-line{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}.header{flex-direction:column;align-items:flex-start;gap:6px} #previewCanvas{width:100%}}
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>Калькулятор ДТФ 2.11</h1>
-  <div class="toolbar">
-    <label>Тип печати:
-      <select id="modeSelect"><option value="DTF">DTF</option><option value="UF_DTF">UF DTF</option></select>
-    </label>
+  <div class="header">
+    <div>
+      <h1 id="title">Калькулятор ДТФ 4.0</h1>
+      <div class="sub">ARI-PRINT.RU</div>
+    </div>
+    <div class="muted">Версия: 4.0 (Skyline)</div>
   </div>
 
-  <!-- Цена за нанесение -->
-  <div class="inputs-row" style="margin-bottom:12px">
-    <label>Цена за нанесение (₽ за шт):
-      <input type="number" id="applyPrice" min="0" step="1" value="0" />
-    </label>
-  </div>
+  <div class="grid">
+    <div>
+      <div class="block">
+        <div class="block-title">Основные параметры</div>
+        <div class="row" style="margin-bottom:10px">
+          <label style="width:120px">Тип печати</label>
+          <select id="modeSelect"><option value="DTF">DTF</option><option value="UF">UF DTF</option></select>
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <label style="width:120px">Цена за метр</label>
+          <input id="pricePerMeter" type="number" value="1600" step="1" />
+        </div>
+        <div class="row">
+          <label style="width:120px">Отступы (см)</label>
+          <div class="row" style="gap:6px">
+            <input id="gapX" type="number" step="0.1" value="0.3" style="width:70px" placeholder="Ширина" />
+            <input id="gapY" type="number" step="0.1" value="0.3" style="width:70px" placeholder="Высота" />
+          </div>
+        </div>
+      </div>
 
-  <div id="printsContainer"></div>
-  <button id="addPrintBtn">+ Добавить принт</button>
+      <div class="block" style="margin-top:12px">
+        <div class="block-title">Доп. услуги</div>
+        <div class="row">
+          <label style="display:flex;align-items:center;gap:8px"><input id="applyToggle" type="checkbox"> Нанесение</label>
+          <label>Цена/шт <input id="applyPrice" type="number" value="0" /></label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px"><input id="cutToggle" type="checkbox"> Нарезка принтов</label>
+          <label>Цена/м <input id="cutPrice" type="number" value="400" /></label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px"><input id="contourToggle" type="checkbox"> Контурная резка</label>
+          <label>Цена/м <input id="contourPrice" type="number" value="400" /></label>
+        </div>
+      </div>
 
-  <div class="inputs-row" style="margin-top:12px">
-    <label>Отступ по ширине (см):<input type="number" id="globalGapX" min="0" step="0.01" value="0.3"></label>
-    <label>Отступ по высоте (см):<input type="number" id="globalGapY" min="0" step="0.01" value="0.3"></label>
-  </div>
+      <div class="block" style="margin-top:12px">
+        <div class="block-title">Принты</div>
+        <div id="printsContainer"></div>
+        <div style="margin-top:10px"><button id="addPrint" type="button">+ Добавить принт</button></div>
+      </div>
 
-  <div class="inputs-row" style="margin-top:12px; max-width:380px">
-    <label>Цена за погонный метр (₽):<input type="number" id="pricePerMeter" min="0" step="1"></label>
-  </div>
+    </div>
 
-  <div id="result">Итог: 0.00 м, 0 ₽</div>
-
-  <div class="preview">
-    <div id="previewCanvas"></div>
+    <div>
+      <div class="block">
+        <div class="info-line"><div class="muted">Итог</div><div id="result">Метраж: 0.00 м — 0 ₽</div></div>
+        <div id="previewWrapper">
+          <div id="rollWidthIndicator">↔ Ширина печати: 58 см</div>
+          <div id="previewCanvas" style="width:464px;min-height:200px"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-// constants
-const ROLL_WIDTH_CM = 58;
-const SCALE = 10; // px per 1 cm for preview
+(function(){
+'use strict';
+// Simple, robust Skyline-based layout — cleaned and fixed for syntax issues
+const SCALE = 8; // px per cm
+const DEFAULT_ROLL = 58;
+let skyline = [];
 
-// elements
-const modeInput = document.getElementById('modeSelect');
-const printsContainer = document.getElementById('printsContainer');
-const addPrintBtn = document.getElementById('addPrintBtn');
-const previewCanvas = document.getElementById('previewCanvas');
-const resultBox = document.getElementById('result');
+// DOM refs
+const modeSelect = document.getElementById('modeSelect');
 const pricePerMeterInput = document.getElementById('pricePerMeter');
+const gapXInput = document.getElementById('gapX');
+const gapYInput = document.getElementById('gapY');
+const applyToggle = document.getElementById('applyToggle');
 const applyPriceInput = document.getElementById('applyPrice');
-const globalGapXInput = document.getElementById('globalGapX');
-const globalGapYInput = document.getElementById('globalGapY');
+const cutToggle = document.getElementById('cutToggle');
+const cutPriceInput = document.getElementById('cutPrice');
+const contourToggle = document.getElementById('contourToggle');
+const contourPriceInput = document.getElementById('contourPrice');
+const printsContainer = document.getElementById('printsContainer');
+const addPrintBtn = document.getElementById('addPrint');
+const previewCanvas = document.getElementById('previewCanvas');
+const rollWidthIndicator = document.getElementById('rollWidthIndicator');
+const resultBox = document.getElementById('result');
 
-// data
-let prints = []; // each: {w:cm, h:cm, q:int, rot:false|'auto'|true}
-let priceManual = false;
+let priceManuallyChanged = false;
 
-// helpers
-function createPrintBlockDOM(p, idx){
-  const block = document.createElement('div');
-  block.className = 'print-block-group';
-  // Use data attributes only on inputs/selects/buttons that need them
-  block.innerHTML = `
-    <div class="inputs-row">
-      <label>Ширина (см):<input type="number" step="0.1" data-i="${idx}" data-k="w" value="${p.w}"></label>
-      <label>Высота (см):<input type="number" step="0.1" data-i="${idx}" data-k="h" value="${p.h}"></label>
-      <label>Количество:<input type="number" min="1" step="1" data-i="${idx}" data-k="q" value="${p.q}"></label>
-      <label>Поворот:<select data-i="${idx}" data-k="rot"><option value="auto" ${p.rot==='auto'?'selected':''}>auto</option><option value="false" ${p.rot===false?'selected':''}>0°</option><option value="true" ${p.rot===true?'selected':''}>90°</option></select></label>
-      <button class="remove-btn" data-i="${idx}" style="height:34px">Удалить</button>
-    </div>`;
-  return block;
+function getRollWidth(){ return (cutToggle.checked || contourToggle.checked) ? 57 : DEFAULT_ROLL; }
+
+function skylineInit(){ skyline = [{x:0,y:0,width:getRollWidth()}]; previewCanvas.style.width = (getRollWidth()*SCALE) + 'px'; rollWidthIndicator.textContent = '\u2194 Ширина печати: ' + getRollWidth() + ' см'; }
+
+function skylineCanPlaceAt(arr, i, w){
+  var line = arr[i];
+  var x = line.x, y = line.y, need = w, collected = 0, idx = i;
+  while(idx < arr.length && collected < need){ if(arr[idx].y > y) return null; collected += arr[idx].width; idx++; }
+  return collected >= need ? {x:x, y:y} : null;
 }
 
-function renderPrintInputs(){
-  printsContainer.innerHTML = '';
-  prints.forEach((p, i)=>{
-    const el = createPrintBlockDOM(p,i);
-    printsContainer.appendChild(el);
-  });
+function skylineFindPosition(arr, w, h){
+  var bestY = Infinity, bestX = 0;
+  for(var i=0;i<arr.length;i++){
+    var pos = skylineCanPlaceAt(arr, i, w);
+    if(!pos) continue;
+    var top = pos.y + h;
+    if(top < bestY){ bestY = top; bestX = pos.x; }
+  }
+  if(!isFinite(bestY)){
+    var maxY = 0; for(var j=0;j<arr.length;j++) if(arr[j].y > maxY) maxY = arr[j].y;
+    return {x:0, y:maxY};
+  }
+  return {x: bestX, y: bestY - h};
 }
 
-function addPrint(){
-  prints.push({w:10,h:10,q:1,rot:'auto'});
-  renderPrintInputs();
-  // no need to attach individual listeners — we'll use event delegation
-  recalc();
+function skylineAddLevel(arr, x, y, w, h){
+  // split existing segments by coverage and insert new top
+  var newSegs = [];
+  var endX = x + w;
+  for(var i=0;i<arr.length;i++){
+    var s = arr[i]; var sStart = s.x; var sEnd = s.x + s.width;
+    if(sEnd <= x || sStart >= endX){ newSegs.push({x:s.x,y:s.y,width:s.width}); continue; }
+    if(sStart < x) newSegs.push({x:sStart,y:s.y,width:x - sStart});
+    if(sEnd > endX) newSegs.push({x:endX,y:s.y,width:sEnd - endX});
+  }
+  newSegs.push({x:x,y:y + h,width:w});
+  newSegs.sort(function(a,b){ return a.x - b.x; });
+  // merge neighbors with same y
+  for(var j=0;j<newSegs.length-1;j++){ var A=newSegs[j], B=newSegs[j+1]; if(Math.abs(A.y - B.y) < 1e-9 && Math.abs(A.x + A.width - B.x) < 1e-9){ A.width += B.width; newSegs.splice(j+1,1); j--; }}
+  arr.length = 0; for(var k=0;k<newSegs.length;k++) arr.push(newSegs[k]);
 }
 
-// Event delegation: handle input/select/button clicks inside printsContainer
-printsContainer.addEventListener('input', e=>{
-  const target = e.target;
-  if(!target) return;
-  const i = target.dataset && target.dataset.i;
-  const k = target.dataset && target.dataset.k;
-  if(typeof i === 'undefined' || !k) return; // only handle controls with data-i and data-k
-  const idx = +i;
-  if(!Number.isInteger(idx) || idx < 0 || idx >= prints.length) return;
-
-  if(k === 'q') {
-    prints[idx][k] = Math.max(1, parseInt(target.value) || 1);
+function getPriceByMeters(mode, meters){
+  if(mode === 'DTF'){
+    if(meters < 1) return 1600; if(meters < 3) return 1400; if(meters < 10) return 1300; if(meters < 30) return 1120; if(meters < 50) return 900; return 850;
   } else {
-    prints[idx][k] = parseFloat(target.value) || 0;
+    if(meters < 1) return 3000; if(meters < 3) return 2000; if(meters < 5) return 1800; if(meters < 11) return 1600; if(meters < 30) return 1400; return 1300;
   }
-  recalc();
-});
-
-// handle select changes (rotation)
-printsContainer.addEventListener('change', e=>{
-  const target = e.target;
-  if(!target) return;
-  const i = target.dataset && target.dataset.i;
-  const k = target.dataset && target.dataset.k;
-  if(typeof i === 'undefined' || !k) return;
-  if(k !== 'rot') return;
-  const idx = +i;
-  if(!Number.isInteger(idx) || idx < 0 || idx >= prints.length) return;
-  const val = target.value;
-  prints[idx].rot = (val === 'true') ? true : (val === 'false' ? false : 'auto');
-  recalc();
-});
-
-// handle remove button clicks
-printsContainer.addEventListener('click', e=>{
-  const target = e.target;
-  if(!target) return;
-  if(target.classList.contains('remove-btn')){
-    const i = target.dataset && target.dataset.i;
-    if(typeof i === 'undefined') return;
-    const idx = +i;
-    if(!Number.isInteger(idx) || idx < 0 || idx >= prints.length) return;
-    prints.splice(idx,1);
-    renderPrintInputs();
-    recalc();
-  }
-});
-
-function getAutoPrice(meters){
-  // цена для DTF и UF DTF
-  if(modeInput.value === 'UF_DTF'){
-    // новые цены UF DTF
-    if(meters < 1) return 3000;
-    if(meters >=1 && meters < 3) return 2000;
-    if(meters >=3 && meters < 10) return 1800;
-    if(meters >=10 && meters < 30) return 1600;
-    if(meters >=30 && meters < 50) return 1400;
-    return 1300;
-  }
-  // старые цены DTF
-  if(meters < 1) return 1600;
-  if(meters >=1 && meters < 3) return 1400;
-  if(meters >=3 && meters < 10) return 1300;
-  if(meters >=10 && meters < 30) return 1120;
-  if(meters >=30 && meters < 50) return 900;
-  return 850;
 }
 
-function recalc(){
-  previewCanvas.innerHTML = '';
-  const gapX = parseFloat(globalGapXInput.value);
-  const gapY = parseFloat(globalGapYInput.value);
-  const gx = isNaN(gapX) ? (modeInput.value==='DTF'?0.3:0.4) : gapX;
-  const gy = isNaN(gapY) ? (modeInput.value==='DTF'?0.3:0.4) : gapY;
+function createPrintRow(w,h,q){
+  w = w || ''; h = h || ''; q = q || 1;
+  var row = document.createElement('div'); row.className='print-row'; row.dataset.rotated='0';
+  var labW = document.createElement('label'); labW.textContent='Ширина '; var inpW=document.createElement('input'); inpW.type='number'; inpW.step='0.1'; inpW.className='pw'; inpW.value=w; labW.appendChild(inpW);
+  var labH = document.createElement('label'); labH.textContent='Высота '; var inpH=document.createElement('input'); inpH.type='number'; inpH.step='0.1'; inpH.className='ph'; inpH.value=h; labH.appendChild(inpH);
+  var labQ = document.createElement('label'); labQ.textContent='Кол-во '; var inpQ=document.createElement('input'); inpQ.type='number'; inpQ.min='1'; inpQ.className='pq'; inpQ.value=q; labQ.appendChild(inpQ);
+  var controls=document.createElement('div'); controls.style.display='flex'; controls.style.gap='6px'; controls.style.alignItems='center';
+  var autoBtn=document.createElement('button'); autoBtn.type='button'; autoBtn.className='small-btn auto-btn'; autoBtn.textContent='AUTO';
+  var rotBtn=document.createElement('button'); rotBtn.type='button'; rotBtn.className='small-btn rot90-btn'; rotBtn.textContent='90°';
+  var delBtn=document.createElement('button'); delBtn.type='button'; delBtn.className='small-btn del-btn'; delBtn.textContent='×';
+  var indicator=document.createElement('span'); indicator.className='group-indicator muted'; indicator.style.marginLeft='6px';
+  controls.appendChild(autoBtn); controls.appendChild(rotBtn); controls.appendChild(delBtn); controls.appendChild(indicator);
+  row.appendChild(labW); row.appendChild(labH); row.appendChild(labQ); row.appendChild(controls);
 
-  // build list of individual prints
-  const items = [];
-  prints.forEach(p=>{
-    for(let j=0;j<(p.q||0); j++) items.push({w:p.w, h:p.h, rot:p.rot});
-  });
+  function markAuto(){ row.dataset.rotated='0'; indicator.textContent=''; }
+  function markRot(){ row.dataset.rotated='1'; indicator.textContent='rot'; }
 
-  // occupied rectangles in cm
-  const occupied = [];
+  inpW.addEventListener('input', function(){ markAuto(); layout(); }); inpH.addEventListener('input', function(){ markAuto(); layout(); }); inpQ.addEventListener('input', function(){ layout(); });
 
-  function overlaps(a, b){
-    return !(a.x + a.w <= b.x || a.x >= b.x + b.w || a.y + a.h <= b.y || a.y >= b.y + b.h);
-  }
+  autoBtn.addEventListener('click', function(){ var key=String(inpW.value)+'x'+String(inpH.value); document.querySelectorAll('#printsContainer .print-row').forEach(function(r){ var k=r.querySelector('.pw').value+'x'+r.querySelector('.ph').value; if(k===key){ r.dataset.rotated='0'; r.querySelector('.group-indicator').textContent=''; }}); layout(); });
 
-  function fits(x,y,w,h){
-    const rect = {x,y,w,h};
-    return !occupied.some(r => overlaps(rect, r));
-  }
+  rotBtn.addEventListener('click', function(){ var key=String(inpW.value)+'x'+String(inpH.value); var rows=document.querySelectorAll('#printsContainer .print-row'); var any=false; rows.forEach(function(r){ var k=r.querySelector('.pw').value+'x'+r.querySelector('.ph').value; if(k===key && r.dataset.rotated==='1') any=true; }); var nv = any ? '0' : '1'; rows.forEach(function(r){ var k=r.querySelector('.pw').value+'x'+r.querySelector('.ph').value; if(k===key){ r.dataset.rotated=nv; r.querySelector('.group-indicator').textContent = nv==='1' ? 'rot' : ''; }}); layout(); });
 
-  // greedy placement
-  items.forEach(item => {
-    const w1 = item.w, h1 = item.h;
-    const w2 = item.h, h2 = item.w;
-    let useRotate;
-    if(item.rot === true) useRotate = true;
-    else if(item.rot === false) useRotate = false;
-    else useRotate = (w2 < w1);
-    const usedW = useRotate ? w2 : w1;
-    const usedH = useRotate ? h2 : h1;
+  delBtn.addEventListener('click', function(){ row.remove(); layout(); });
+  printsContainer.appendChild(row);
+  return row;
+}
 
-    let placed = false;
-    for(let y=0; !placed && y<10000; y += 0.5){
-      for(let x=0; !placed && x <= ROLL_WIDTH_CM - usedW + 1e-6; x += 0.5){
-        if(fits(x, y, usedW + gx, usedH + gy)){
-          occupied.push({x, y, w: usedW + gx, h: usedH + gy, usedW, usedH});
-          placed = true;
-        }
+addPrintBtn.addEventListener('click', function(e){ e.preventDefault(); createPrintRow(); layout(); });
+addPrintBtn.addEventListener('touchstart', function(e){ e.preventDefault(); createPrintRow(); layout(); });
+
+function layout(){
+  previewCanvas.innerHTML=''; skylineInit();
+  var gapX = parseFloat(gapXInput.value) || 0; var gapY = parseFloat(gapYInput.value) || 0;
+
+  // build groups (B1) — sum quantities by exact size
+  var groups = new Map(); var rows = printsContainer.querySelectorAll('.print-row');
+  rows.forEach(function(r){ var w=parseFloat(r.querySelector('.pw').value)||0; var h=parseFloat(r.querySelector('.ph').value)||0; var q=Math.max(1, parseInt(r.querySelector('.pq').value)||1); var key=w+'x'+h; if(!groups.has(key)) groups.set(key,{w:w,h:h,qty:0,manual:false}); var g=groups.get(key); g.qty += q; if(r.dataset.rotated==='1') g.manual=true; });
+
+  // prepare rects array
+  var rects = [];
+  groups.forEach(function(g,key){ var w=g.w,h=g.h,qty=g.qty,manual=g.manual; var finalW, finalH; var rollW=getRollWidth();
+    if(!manual){ var fitsNormal = (w + gapX) <= rollW; var fitsRot = (h + gapX) <= rollW; if(!fitsNormal && fitsRot){ finalW = h; finalH = w; } else if(!fitsRot && fitsNormal){ finalW = w; finalH = h; } else if(!fitsNormal && !fitsRot){ finalW = w; finalH = h; } else {
+        // both fit — simulate group placement in both orientations
+        function simulate(orig,count,rw,rh){ var sim=JSON.parse(JSON.stringify(orig)); var maxY=0; for(var i=0;i<count;i++){ var pw=rw+gapX; var ph=rh+gapY; var p=skylineFindPosition(sim,pw,ph); if(!isFinite(p.y)){ var m=0; for(var jj=0;jj<sim.length;jj++) if(sim[jj].y>m) m=sim[jj].y; p={x:0,y:m}; } skylineAddLevel(sim,p.x,p.y,pw,ph); if(p.y+ph>maxY) maxY=p.y+ph; } return maxY; }
+        var sim1=simulate(JSON.parse(JSON.stringify(skyline)),qty,w,h); var sim2=simulate(JSON.parse(JSON.stringify(skyline)),qty,h,w); if(sim2 < sim1){ finalW = h; finalH = w; } else { finalW = w; finalH = h; }
       }
-    }
-    if(!placed){
-      occupied.push({x:0, y:10000, w: usedW + gx, h: usedH + gy, usedW, usedH});
-    }
-  });
+    } else { finalW = h; finalH = w; }
+    for(var k=0;k<qty;k++) rects.push({w:finalW,h:finalH,origW:w,origH:h}); });
 
-  // draw
-  let maxBottom = 0;
-  occupied.forEach(r=>{
-    const el = document.createElement('div');
-    el.className = 'print-rect';
-    el.style.left = (r.x * SCALE) + 'px';
-    el.style.top = (r.y * SCALE) + 'px';
-    el.style.width = (r.usedW * SCALE) + 'px';
-    el.style.height = (r.usedH * SCALE) + 'px';
-    el.textContent = `${r.usedW.toFixed(1)}×${r.usedH.toFixed(1)}`;
-    previewCanvas.appendChild(el);
-    maxBottom = Math.max(maxBottom, r.y + r.h);
-  });
+  // sort largest first
+  rects.sort(function(a,b){ return Math.max(b.w,b.h) - Math.max(a.w,a.h); });
 
-  // preview canvas sizing (fixed width = 58cm)
-  const previewHeightPx = (maxBottom + 2) * SCALE; // +2cm padding
-  previewCanvas.style.width = (ROLL_WIDTH_CM * SCALE) + 'px';
-  previewCanvas.style.height = Math.max(previewHeightPx, 100) + 'px';
+  var maxY = 0;
+  rects.forEach(function(r){ var placeW=r.w+gapX; var placeH=r.h+gapY; var pos=skylineFindPosition(skyline,placeW,placeH); if(!isFinite(pos.y)){ var m=0; for(var jj=0;jj<skyline.length;jj++) if(skyline[jj].y>m) m=skyline[jj].y; pos={x:0,y:m}; } skylineAddLevel(skyline,pos.x,pos.y,placeW,placeH); var el=document.createElement('div'); el.className='print-rect'; el.style.left=(pos.x*SCALE)+'px'; el.style.top=(pos.y*SCALE)+'px'; el.style.width=(r.w*SCALE)+'px'; el.style.height=(r.h*SCALE)+'px'; el.textContent = String(r.w)+'x'+String(r.h); previewCanvas.appendChild(el); if(pos.y+placeH>maxY) maxY=pos.y+placeH; });
 
-  // meters rounded up to hundredths
-  const meters = Math.ceil((maxBottom / 100) * 100) / 100;
+  var meters = Math.ceil((maxY/100) * 100) / 100; // round up to hundredths
+  if(!priceManuallyChanged) pricePerMeterInput.value = getPriceByMeters(modeSelect.value, meters);
+  var pricePerMeter = parseFloat(pricePerMeterInput.value) || 0; var printCost = meters * pricePerMeter;
+  var totalInstances = rects.length; var applyCost = applyToggle.checked ? totalInstances * (parseFloat(applyPriceInput.value)||0) : 0; var cutCost = cutToggle.checked ? meters * (parseFloat(cutPriceInput.value)||0) : 0; var contourCost = contourToggle.checked ? meters * (parseFloat(contourPriceInput.value)||0) : 0; var total = printCost + applyCost + cutCost + contourCost;
 
-  // price per meter auto or manual
-  if(!priceManual){
-    pricePerMeterInput.value = getAutoPrice(meters);
-  }
-  const pricePerMeter = +pricePerMeterInput.value || 0;
-  const printPrice = Math.round(meters * pricePerMeter);
-
-  // apply price: per print
-  const totalPrints = prints.reduce((s,p)=>s + (p.q||0), 0);
-  const applyPrice = +applyPriceInput.value || 0;
-  const applyTotal = totalPrints * applyPrice;
-
-  const total = printPrice + applyTotal;
-  resultBox.textContent = `Итог: ${meters.toFixed(2)} м, ${total.toFixed(0)} ₽`;
+  var lines = [];
+  var pricePerItem = 0; var rowsCount = groups.size;
+  if(applyToggle.checked && totalInstances>0){ var basePrice = total / totalInstances; pricePerItem = basePrice * rowsCount; }
+  lines.push('Метраж: ' + meters.toFixed(2) + ' м — ' + printCost.toFixed(0) + ' ₽');
+  if(applyToggle.checked) lines.push('Нанесение: ' + applyCost.toFixed(0) + ' ₽');
+  if(cutToggle.checked) lines.push('Нарезка: ' + cutCost.toFixed(0) + ' ₽');
+  if(contourToggle.checked) lines.push('Контур: ' + contourCost.toFixed(0) + ' ₽');
+  if(applyToggle.checked) lines.push('Цена за изделие: ' + pricePerItem.toFixed(2) + ' ₽');
+  lines.push('Итого: ' + total.toFixed(0) + ' ₽');
+  resultBox.innerHTML = lines.map(function(l){ return '<div>'+l+'</div>'; }).join('');
 }
 
-// events
-addPrintBtn.addEventListener('click', addPrint);
-pricePerMeterInput.addEventListener('input', ()=>{ priceManual = true; recalc(); });
-applyPriceInput.addEventListener('input', recalc);
-globalGapXInput.addEventListener('input', recalc);
-globalGapYInput.addEventListener('input', recalc);
-modeInput.addEventListener('change', ()=>{ if(modeInput.value==='DTF'){ globalGapXInput.value='0.3'; globalGapYInput.value='0.3'; } else { globalGapXInput.value='0.4'; globalGapYInput.value='0.4'; } priceManual=false; recalc(); });
+modeSelect.addEventListener('change', function(){ priceManuallyChanged=false; if(modeSelect.value==='DTF'){ gapXInput.value='0.3'; gapYInput.value='0.3'; } else { gapXInput.value='0.4'; gapYInput.value='0.4'; } layout(); });
+pricePerMeterInput.addEventListener('input', function(){ priceManuallyChanged=true; layout(); });
+[gapXInput,gapYInput,applyToggle,applyPriceInput,cutToggle,cutPriceInput,contourToggle,contourPriceInput].forEach(function(el){ if(!el) return; el.addEventListener('input', layout); el.addEventListener('change', layout); });
 
-// init
-addPrint();
+// sample rows
+createPrintRow(10,15,2); createPrintRow(15,20,1); createPrintRow(5,7,2);
+layout();
+
+})();
 </script>
 </body>
 </html>
