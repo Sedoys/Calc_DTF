@@ -1,9 +1,9 @@
-<!-- Калькулятор ДТФ 4.0 — Финальная исправленная версия -->
+<!-- Калькулятор ДТФ 4.1 — Финальная исправленная версия -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
-<title>Калькулятор ДТФ 4.0 (Skyline)</title>
+<title>Калькулятор ДТФ 4.1 (Skyline)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   body{font-family:Inter,system-ui,Arial,sans-serif;padding:18px;background:#f5f7fb;margin:0;color:#222}
@@ -15,18 +15,18 @@
   .block{background:#fff;padding:14px;border-radius:10px;box-shadow:0 6px 20px rgba(20,30,60,0.06)}
   label{display:block;font-size:13px;color:#444;margin-bottom:8px}
   input,select,button{font-size:13px}
-  input,select{padding:8px;border-radius:8px;border:1px solid #e0e6ef;background:#fff}
+  input,select{padding:6px;border-radius:8px;border:1px solid #e0e6ef;background:#fff;font-size:13px;max-width:90px}
   button{padding:8px 10px;border-radius:8px;border:none;background:#1f4eda;color:#fff;cursor:pointer}
   .row{display:flex;gap:8px;align-items:center}
   .muted{color:#777;font-size:13px}
-  #printsContainer .print-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  #printsContainer .print-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
   .small-btn{padding:6px 8px;border-radius:6px;border:none;color:#fff;cursor:pointer}
   .auto-btn{background:#6fb3d2}
   .rot90-btn{background:#2b6acb}
   .del-btn{background:#e05d5d}
-  #previewWrapper{display:flex;flex-direction:column;align-items:center}
+  #previewWrapper{display:flex;flex-direction:column;align-items:flex-start;padding-left:40px;}
   #rollWidthIndicator{font-weight:600;margin-bottom:8px;color:#333}
-  #previewCanvas{position:relative;background:#fff;border:2px dashed #bdbdbd;border-radius:8px;overflow:auto}
+  #previewCanvas{position:relative;background:#fff;border:2px dashed #bdbdbd;border-radius:8px;overflow:auto; max-width:100%;}{position:relative;background:#fff;border:2px dashed #bdbdbd;border-radius:8px;overflow:auto}
   .print-rect{position:absolute;background:rgba(31,78,218,0.14);border:1px solid rgba(31,78,218,0.35);color:#08306b;font-size:11px;display:flex;align-items:center;justify-content:center;border-radius:4px;box-sizing:border-box}
   #result{white-space:pre-line;font-weight:600}
   .info-line{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -37,10 +37,10 @@
 <div class="container">
   <div class="header">
     <div>
-      <h1 id="title">Калькулятор ДТФ 4.0</h1>
+      <h1 id="title">Калькулятор ДТФ 4.1</h1>
       <div class="sub">ARI-PRINT.RU</div>
     </div>
-    <div class="muted">Версия: 4.0 (Skyline)</div>
+    <div class="muted">Версия: 4.1 (Skyline)</div>
   </div>
 
   <div class="grid">
@@ -255,8 +255,7 @@ modeSelect.addEventListener('change', function(){ priceManuallyChanged=false; if
 pricePerMeterInput.addEventListener('input', function(){ priceManuallyChanged=true; layout(); });
 [gapXInput,gapYInput,applyToggle,applyPriceInput,cutToggle,cutPriceInput,contourToggle,contourPriceInput].forEach(function(el){ if(!el) return; el.addEventListener('input', layout); el.addEventListener('change', layout); });
 
-// sample rows
-createPrintRow(10,15,2); createPrintRow(15,20,1); createPrintRow(5,7,2);
+// Начальная загрузка без предустановленных принтов
 layout();
 
 })();
